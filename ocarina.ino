@@ -6,6 +6,7 @@
 #include <Wire.h>
 #include <nunchuck_funcs.h>
 #include <SoftwareSerial.h>
+#include <aJSON.h>
 
 using namespace std;
 
@@ -35,6 +36,19 @@ int note = 0;
 Song songs[2];
 vector<int> notesPlayed;
 int NOTE_LIMIT = 10;
+
+char* songText = "{"
+	"\"songs\": ["
+		"{"
+			"\"name\": \"Song Of Time\","
+			"\"notes\": [69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65,"
+"67, 69, 62, 60, 64, 62],"
+			"\"times\": [600, 900, 600, 600, 900, 600, 300, 300, 600,"
+"600, 300, 300, 600, 600, 300, 300, 900],"
+			"\"nunchuck\": [3, 1, 2, 3, 1, 2]"	
+		"}"
+	"]"
+"}";
 
 void setup()
 {
@@ -103,7 +117,37 @@ void loop() {
 }
 
 void generateSongs() {
-  songs[0].name = "Song of Time";
+  aJsonObject* root = aJson.parse(songText);
+  Serial.println(aJson.print(root));
+  aJsonObject* songData = aJson.getObjectItem(root, "songs");
+  aJsonObject* song = aJson.getArrayItem(songData, 0);
+  aJsonObject* songName = aJson.getObjectItem(song, "name");
+  songs[0].name = songName->valuestring;
+  aJsonObject* noteData = aJson.getObjectItem(song, "notes");
+  aJsonObject* timeData = aJson.getObjectItem(song, "times"); 
+  int numberNotes = aJson.getArraySize(noteData);
+  for (int i = 0; i < numberNotes; i++) {
+    aJsonObject* note = aJson.getArrayItem(noteData, i);
+    aJsonObject* time = aJson.getArrayItem(timeData, i);
+    songs[0].notes.push_back(note->valueint);
+    songs[0].notes.push_back(time->valueint);
+  }
+  aJsonObject* nunchuckData = aJson.getObjectItem(song, "nunchuck");
+  int numberNunchuck = aJson.getArraySize(nunchuckData);
+  for (int i = 0; i < numberNunchuck; i++) {
+    aJsonObject* note = aJson.getArrayItem(nunchuckData, i);
+    songs[0].nunchuck_notes.push_back(note->valueint);
+  }
+  Serial.println(songs[0].name);
+  for (int i = 0; i < songs[0].notes.size(); i++) {
+    Serial.println(songs[0].notes.at(i));
+  }
+  Serial.println();
+  for (int i = 0; i < songs[0].nunchuck_notes.size(); i++) {
+    Serial.println(songs[0].nunchuck_notes.at(i));
+  }
+  
+  /*songs[0].name = "Song of Time";
   int songOfTimeNotes[17] = {69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65, 67, 69, 62, 60, 64, 62};
   int songOfTimeTimes[17] = {600, 900, 600, 600, 900, 600, 300, 300, 600, 600, 300, 300, 600, 600, 300, 300, 900};
   for (int i = 0; i < sizeof(songOfTimeNotes) / sizeof(int); i++) {
@@ -125,19 +169,17 @@ void generateSongs() {
   int invertedSongOfTimeNunchuck[6] = {2, 1, 3, 2, 1, 3};
   for (int i = 0; i < sizeof(invertedSongOfTimeNunchuck) / sizeof(int); i++) {
     songs[1].nunchuck_notes.push_back(invertedSongOfTimeNunchuck[i]);
-  }
+  }*/
 }
 
 void updateAndDetectSong(int notePlayed) {
   notesPlayed.push_back(notePlayed);
   if (notesPlayed.size() > NOTE_LIMIT)
     notesPlayed.erase(&notesPlayed.at(0));
-  for (int i = 0; i < notesPlayed.size(); i++) {
+  /*for (int i = 0; i < notesPlayed.size(); i++) {
     Serial.print(notesPlayed.at(i));
-  }
-  Serial.println();
+  }*/
   for (int s = 0; s < sizeof(songs) / sizeof(Song); s++) {
-    Serial.println(s);
     if (notesPlayed.size() >= songs[s].nunchuck_notes.size()) {
       boolean songsEqual = true;
       for (int i = 0; i < songs[s].nunchuck_notes.size(); i++) {
