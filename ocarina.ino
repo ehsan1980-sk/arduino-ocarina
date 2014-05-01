@@ -1,3 +1,4 @@
+#include <JsonParser.h>
 #include <unwind-cxx.h>
 #include <system_configuration.h>
 #include <utility.h>
@@ -6,7 +7,6 @@
 #include <Wire.h>
 #include <nunchuck_funcs.h>
 #include <SoftwareSerial.h>
-#include <JsonParser.h>
 #include <MemoryFree.h>
 
 using namespace std;
@@ -34,22 +34,11 @@ byte resetMIDI = 4;
 byte ledPin = 13;
 int instrument = 0;
 int note = 0;
-Song songs[2];
+Song songs[1];
 vector<int> notesPlayed;
 int NOTE_LIMIT = 10;
 
-char* songText = "{ "
-	"\"songs\": [ "
-		"{ "
-			"\"name\": \"Song Of Time\", "
-			"\"notes\": [69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65, "
-"67, 69, 62, 60, 64, 62], "
-			"\"times\": [600, 900, 600, 600, 900, 600, 300, 300, 600, "
-"600, 300, 300, 600, 600, 300, 300, 900], "
-			"\"nunchuck\": [3, 1, 2, 3, 1, 2] "	
-		"} "
-	"] "
-"}";
+char songJson[] = "{\"name\":\"Song Of Time\",\"notes\":[69,62,65,69,62,65,69,72,71,67,65,67,69,62,60,64,62],\"times\":[600,900,600,600,900,600,300,300,600,600,300,300,600,600,300,300,900],\"nunchuck\":[3,1,2,3,1,2]}";
 
 void setup()
 {
@@ -118,37 +107,34 @@ void loop() {
 }
 
 void generateSongs() {
-  Serial.println(songText);
-  aJsonObject* root = aJson.parse(songText);
-  aJsonObject* songData = aJson.getObjectItem(root, "songs");
-  aJsonObject* song = aJson.getArrayItem(songData, 0);
-  aJsonObject* songName = aJson.getObjectItem(song, "name");
-  songs[0].name = songName->valuestring;
-  aJsonObject* noteData = aJson.getObjectItem(song, "notes");
-  aJsonObject* timeData = aJson.getObjectItem(song, "times"); 
-  int numberNotes = aJson.getArraySize(noteData);
-  for (int i = 0; i < numberNotes; i++) {
-    aJsonObject* note = aJson.getArrayItem(noteData, i);
-    aJsonObject* time = aJson.getArrayItem(timeData, i);
-    songs[0].notes.push_back(note->valueint);
-    songs[0].notes.push_back(time->valueint);
+  JsonParser<64> parser;
+  Serial.println(songJson);
+  JsonHashTable song = parser.parseHashTable(songJson);
+  if (song.success()) {
+    songs[0].name = songs[0].name = song.getString("name");
+    JsonArray noteData = song.getArray("notes");
+    JsonArray timeData = song.getArray("times");
+    for (int i = 0; i < noteData.getLength(); i++) {
+      songs[0].notes.push_back((int)noteData.getLong(i));
+      songs[0].times.push_back((int)timeData.getLong(i));
+    }
+    JsonArray nunchuckData = song.getArray("nunchuck");
+    for (int i = 0; i < nunchuckData.getLength(); i++) {
+      songs[0].nunchuck_notes.push_back((int)nunchuckData.getLong(i));
+    }
+    Serial.println(songs[0].name);
+    for (int i = 0; i < songs[0].notes.size(); i++) {
+      Serial.println(songs[0].notes.at(i));
+    }
+    Serial.println();
+    for (int i = 0; i < songs[0].nunchuck_notes.size(); i++) {
+      Serial.println(songs[0].nunchuck_notes.at(i));
+    }
+    Serial.print("Free Memory = ");
+    Serial.println(getFreeMemory());
+  } else {
+    Serial.println("Json error");
   }
-  aJsonObject* nunchuckData = aJson.getObjectItem(song, "nunchuck");
-  int numberNunchuck = aJson.getArraySize(nunchuckData);
-  for (int i = 0; i < numberNunchuck; i++) {
-    aJsonObject* note = aJson.getArrayItem(nunchuckData, i);
-    songs[0].nunchuck_notes.push_back(note->valueint);
-  }
-  Serial.println(songs[0].name);
-  for (int i = 0; i < songs[0].notes.size(); i++) {
-    Serial.println(songs[0].notes.at(i));
-  }
-  Serial.println();
-  for (int i = 0; i < songs[0].nunchuck_notes.size(); i++) {
-    Serial.println(songs[0].nunchuck_notes.at(i));
-  }
-  Serial.print("Free Memory = ");
-  Serial.println(getFreeMemory());
   
   /*songs[0].name = "Song of Time";
   int songOfTimeNotes[17] = {69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65, 67, 69, 62, 60, 64, 62};
@@ -177,11 +163,13 @@ void generateSongs() {
 
 void updateAndDetectSong(int notePlayed) {
   notesPlayed.push_back(notePlayed);
-  if (notesPlayed.size() > NOTE_LIMIT)
+  if (notesPlayed.size() > NOTE_LIMIT) {
     notesPlayed.erase(&notesPlayed.at(0));
-  /*for (int i = 0; i < notesPlayed.size(); i++) {
-    Serial.print(notesPlayed.at(i));
-  }*/
+    Serial.println("Note removed.");
+  }
+  for (int i = 0; i < notesPlayed.size(); i++) {
+    Serial.println(notesPlayed.at(i));
+  }
   for (int s = 0; s < sizeof(songs) / sizeof(Song); s++) {
     if (notesPlayed.size() >= songs[s].nunchuck_notes.size()) {
       boolean songsEqual = true;
