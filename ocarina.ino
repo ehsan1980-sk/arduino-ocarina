@@ -6,7 +6,8 @@
 #include <Wire.h>
 #include <nunchuck_funcs.h>
 #include <SoftwareSerial.h>
-#include <aJSON.h>
+#include <JsonParser.h>
+#include <MemoryFree.h>
 
 using namespace std;
 
@@ -37,17 +38,17 @@ Song songs[2];
 vector<int> notesPlayed;
 int NOTE_LIMIT = 10;
 
-char* songText = "{"
-	"\"songs\": ["
-		"{"
-			"\"name\": \"Song Of Time\","
-			"\"notes\": [69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65,"
-"67, 69, 62, 60, 64, 62],"
-			"\"times\": [600, 900, 600, 600, 900, 600, 300, 300, 600,"
-"600, 300, 300, 600, 600, 300, 300, 900],"
-			"\"nunchuck\": [3, 1, 2, 3, 1, 2]"	
-		"}"
-	"]"
+char* songText = "{ "
+	"\"songs\": [ "
+		"{ "
+			"\"name\": \"Song Of Time\", "
+			"\"notes\": [69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65, "
+"67, 69, 62, 60, 64, 62], "
+			"\"times\": [600, 900, 600, 600, 900, 600, 300, 300, 600, "
+"600, 300, 300, 600, 600, 300, 300, 900], "
+			"\"nunchuck\": [3, 1, 2, 3, 1, 2] "	
+		"} "
+	"] "
 "}";
 
 void setup()
@@ -117,8 +118,8 @@ void loop() {
 }
 
 void generateSongs() {
+  Serial.println(songText);
   aJsonObject* root = aJson.parse(songText);
-  Serial.println(aJson.print(root));
   aJsonObject* songData = aJson.getObjectItem(root, "songs");
   aJsonObject* song = aJson.getArrayItem(songData, 0);
   aJsonObject* songName = aJson.getObjectItem(song, "name");
@@ -146,6 +147,8 @@ void generateSongs() {
   for (int i = 0; i < songs[0].nunchuck_notes.size(); i++) {
     Serial.println(songs[0].nunchuck_notes.at(i));
   }
+  Serial.print("Free Memory = ");
+  Serial.println(getFreeMemory());
   
   /*songs[0].name = "Song of Time";
   int songOfTimeNotes[17] = {69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65, 67, 69, 62, 60, 64, 62};
