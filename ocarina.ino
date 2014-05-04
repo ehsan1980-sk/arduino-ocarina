@@ -12,12 +12,12 @@
 using namespace std;
 
 class Song {
-  public:
-    String name;
-    vector<int> notes;
-    vector<int> nunchuck_notes;
-    vector<int> times;
-    void playSong();
+public:
+  String name;
+  vector<int> notes;
+  vector<int> nunchuck_notes;
+  vector<int> times;
+  void playSong();
 };
 
 void Song::playSong() {
@@ -34,11 +34,20 @@ byte resetMIDI = 4;
 byte ledPin = 13;
 int instrument = 0;
 int note = 0;
-Song songs[1];
+Song songs[3];
 vector<int> notesPlayed;
 int NOTE_LIMIT = 10;
 
-char songJson[] = "{\"name\":\"Song Of Time\",\"notes\":[69,62,65,69,62,65,69,72,71,67,65,67,69,62,60,64,62],\"times\":[600,900,600,600,900,600,300,300,600,600,300,300,600,600,300,300,900],\"nunchuck\":[3,1,2,3,1,2]}";
+char* songJson[] = {
+  "{\"name\":\"Song Of Time\",\"notes\":[69,62,65,69,62,65,69,72,71,67,65,67,69,62,60,64,62],\"times\":[600,900,600,600,900,600,300,300,600,600,300,300,600,600,300,300,900],\"nunchuck\":[3,1,2,3,1,2]}",
+  "{\"name\":\"Inverted Song of Time\",\"notes\":[65,62,69,64,63,62,61,60,59],\"times\":[600,900,600,600,900,600,900,300,300,300,600,900],\"nunchuck\":[2,1,3,2,1,3]}",
+  "{\"name\":\"Epona's Song\",\"notes\":[74,71,69,74,71,69,74,71,69,71,69],\"times\":[200,200,800,200,200,800,200,200,400,400,600],\"nunchuck\":[5,4,3,5,4,3]}",
+  "{\"name\":\"Song of Healing\",\"notes\":[71,69,65,71,69,65,71,69,64,62,64],\"times\"[300,300,300,300,300,300,300,300,150,150,600],\"nunchuck\":[4,3,2,4,3,2]}",
+  "{\"name\":\"Song of Double Time\",\"notes\":[69,69,62,62,65,65,69,69,62,62,65,65,70,70,67,67,70,70,73,73,69,69,76,77],\"times\":[300,280,260,240,220,220,200,200,180,180,180,180,180,180,180,180,180,180,180,180,300,600],\"nunchuck\":[3,3,1,1,2,2]}",
+  "{\"name\":\"Song of Soaring\",\"notes\":[65,71,74,65,71,74],\"times\":[200,200,400,200,200,600],\"nunchuck\":[2,4,5,2,4,5]",
+  "{\"name\":\"Elegy of Emptiness\",\"notes\":[69,71,69,65,69,74,71],\"times\":[300,100,200,200,200,200,400],\"nunchuck\":[3,4,3,2,3,5,4]}",
+  "{\"name\":\"Oath to Order\",\"notes\":[69,65,62,65,69,74],\"times\":[400,200,200,200,200,400],\"nunchuck\":[3,2,1,2,3,5]}"
+};
 
 void setup()
 {
@@ -50,13 +59,13 @@ void setup()
   digitalWrite(resetMIDI, HIGH);
   delay(100);
   talkMIDI(0xB0, 0x07, 80);
-  
+
   nunchuck_setpowerpins();
   nunchuck_init();
-  
+
   talkMIDI(0xB0, 0, 0x00);
   talkMIDI(0xC0, 77, 0);
-  
+
   generateSongs();
 }
 
@@ -66,16 +75,20 @@ void loop() {
     if (nunchuck_cbutton()) {
       noteOn(0, 62, 90);
       note = 1;
-    }  else if (nunchuck_joyy() < 55) {
+    }  
+    else if (nunchuck_joyy() < 55) {
       noteOn(0, 65, 90);
       note = 2;
-    } else if (nunchuck_joyx() > 200) {
+    } 
+    else if (nunchuck_joyx() > 200) {
       noteOn(0, 69, 90);
       note = 3;
-    } else if (nunchuck_joyx() < 55) {
+    } 
+    else if (nunchuck_joyx() < 55) {
       noteOn(0, 71, 90);
       note = 4;
-    } else if (nunchuck_joyy() > 200) {
+    } 
+    else if (nunchuck_joyy() > 200) {
       noteOn(0, 74, 90);
       note = 5;
     } 
@@ -85,19 +98,23 @@ void loop() {
       noteOff(0, 62, 90);
       note = 0;
       updateAndDetectSong(1);
-    } else if (note == 2 && nunchuck_joyy() >= 55) {
+    } 
+    else if (note == 2 && nunchuck_joyy() >= 55) {
       noteOff(0, 65, 90);
       note = 0;
       updateAndDetectSong(2);
-    } else if (note == 3 && nunchuck_joyx() <= 200) {
+    } 
+    else if (note == 3 && nunchuck_joyx() <= 200) {
       noteOff(0, 69, 90);
       note = 0;
       updateAndDetectSong(3);
-    } else if (note == 4 && nunchuck_joyx() >= 55) {
+    } 
+    else if (note == 4 && nunchuck_joyx() >= 55) {
       noteOff(0, 71, 90);
       note = 0;
       updateAndDetectSong(4);
-    } else if (note == 5 && nunchuck_joyy() <= 200) {
+    } 
+    else if (note == 5 && nunchuck_joyy() <= 200) {
       noteOff(0, 74, 90);
       note = 0;
       updateAndDetectSong(5);
@@ -108,57 +125,60 @@ void loop() {
 
 void generateSongs() {
   JsonParser<64> parser;
-  Serial.println(songJson);
-  JsonHashTable song = parser.parseHashTable(songJson);
-  if (song.success()) {
-    songs[0].name = songs[0].name = song.getString("name");
-    JsonArray noteData = song.getArray("notes");
-    JsonArray timeData = song.getArray("times");
-    for (int i = 0; i < noteData.getLength(); i++) {
-      songs[0].notes.push_back((int)noteData.getLong(i));
-      songs[0].times.push_back((int)timeData.getLong(i));
+  for (int i = 0; i < sizeof(songs)/sizeof(Song); i++) {
+    Serial.println(songJson[i]);
+    JsonHashTable song = parser.parseHashTable(songJson[i]);
+    if (song.success()) {
+      songs[i].name = songs[i].name = song.getString("name");
+      JsonArray noteData = song.getArray("notes");
+      JsonArray timeData = song.getArray("times");
+      for (int j = 0; j < noteData.getLength(); j++) {
+        songs[i].notes.push_back((int)noteData.getLong(j));
+        songs[i].times.push_back((int)timeData.getLong(j));
+      }
+      JsonArray nunchuckData = song.getArray("nunchuck");
+      for (int j = 0; j < nunchuckData.getLength(); j++) {
+        songs[i].nunchuck_notes.push_back((int)nunchuckData.getLong(j));
+      }
+      Serial.println(songs[i].name);
+      for (int j = 0; j < songs[i].notes.size(); j++) {
+        Serial.println(songs[i].notes.at(j));
+      }
+      Serial.println();
+      for (int j = 0; j < songs[i].nunchuck_notes.size(); j++) {
+        Serial.println(songs[i].nunchuck_notes.at(j));
+      }
+      Serial.print("Free Memory = ");
+      Serial.println(getFreeMemory());
+    } 
+    else {
+      Serial.println("Json error");
     }
-    JsonArray nunchuckData = song.getArray("nunchuck");
-    for (int i = 0; i < nunchuckData.getLength(); i++) {
-      songs[0].nunchuck_notes.push_back((int)nunchuckData.getLong(i));
-    }
-    Serial.println(songs[0].name);
-    for (int i = 0; i < songs[0].notes.size(); i++) {
-      Serial.println(songs[0].notes.at(i));
-    }
-    Serial.println();
-    for (int i = 0; i < songs[0].nunchuck_notes.size(); i++) {
-      Serial.println(songs[0].nunchuck_notes.at(i));
-    }
-    Serial.print("Free Memory = ");
-    Serial.println(getFreeMemory());
-  } else {
-    Serial.println("Json error");
   }
-  
-  /*songs[0].name = "Song of Time";
-  int songOfTimeNotes[17] = {69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65, 67, 69, 62, 60, 64, 62};
-  int songOfTimeTimes[17] = {600, 900, 600, 600, 900, 600, 300, 300, 600, 600, 300, 300, 600, 600, 300, 300, 900};
-  for (int i = 0; i < sizeof(songOfTimeNotes) / sizeof(int); i++) {
-    songs[0].notes.push_back(songOfTimeNotes[i]);
-    songs[0].times.push_back(songOfTimeTimes[i]);
-  }
-  int songOfTimeNunchuck[6] = {3, 1, 2, 3, 1, 2};
-  for (int i = 0; i < sizeof(songOfTimeNunchuck) / sizeof(int); i++) {
-    songs[0].nunchuck_notes.push_back(songOfTimeNunchuck[i]);
-  }
-  
-  songs[1].name = "Inverted Song of Time";
-  int invertedSongOfTimeNotes[12] = {65, 62, 69, 65, 62, 69, 64, 63, 62, 61, 60, 59};
-  int invertedSongOfTimeTimes[12] = {600, 900, 600, 600, 900, 600, 900, 300, 300, 300, 600, 900};
-  for (int i = 0; i < sizeof(invertedSongOfTimeNotes) / sizeof(int); i++) {
-    songs[1].notes.push_back(invertedSongOfTimeNotes[i]);
-    songs[1].times.push_back(invertedSongOfTimeTimes[i]);
-  }
-  int invertedSongOfTimeNunchuck[6] = {2, 1, 3, 2, 1, 3};
-  for (int i = 0; i < sizeof(invertedSongOfTimeNunchuck) / sizeof(int); i++) {
-    songs[1].nunchuck_notes.push_back(invertedSongOfTimeNunchuck[i]);
-  }*/
+
+  /*songs[i].name = "Song of Time";
+   int songOfTimeNotes[17] = {69, 62, 65, 69, 62, 65, 69, 72, 71, 67, 65, 67, 69, 62, 60, 64, 62};
+   int songOfTimeTimes[17] = {600, 900, 600, 600, 900, 600, 300, 300, 600, 600, 300, 300, 600, 600, 300, 300, 900};
+   for (int i = 0; i < sizeof(songOfTimeNotes) / sizeof(int); i++) {
+   songs[i].notes.push_back(songOfTimeNotes[i]);
+   songs[i].times.push_back(songOfTimeTimes[i]);
+   }
+   int songOfTimeNunchuck[6] = {3, 1, 2, 3, 1, 2};
+   for (int i = 0; i < sizeof(songOfTimeNunchuck) / sizeof(int); i++) {
+   songs[i].nunchuck_notes.push_back(songOfTimeNunchuck[i]);
+   }
+   
+   songs[1].name = "Inverted Song of Time";
+   int invertedSongOfTimeNotes[12] = {65, 62, 69, 65, 62, 69, 64, 63, 62, 61, 60, 59};
+   int invertedSongOfTimeTimes[12] = {600, 900, 600, 600, 900, 600, 900, 300, 300, 300, 600, 900};
+   for (int i = 0; i < sizeof(invertedSongOfTimeNotes) / sizeof(int); i++) {
+   songs[1].notes.push_back(invertedSongOfTimeNotes[i]);
+   songs[1].times.push_back(invertedSongOfTimeTimes[i]);
+   }
+   int invertedSongOfTimeNunchuck[6] = {2, 1, 3, 2, 1, 3};
+   for (int i = 0; i < sizeof(invertedSongOfTimeNunchuck) / sizeof(int); i++) {
+   songs[1].nunchuck_notes.push_back(invertedSongOfTimeNunchuck[i]);
+   }*/
 }
 
 void updateAndDetectSong(int notePlayed) {
@@ -211,3 +231,4 @@ void talkMIDI(byte cmd, byte data1, byte data2) {
 
   digitalWrite(ledPin, LOW);
 }
+
